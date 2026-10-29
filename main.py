@@ -1869,7 +1869,7 @@ class Bot:
        # btn9 = types.KeyboardButton("Рандомный прокси")
 
         
-        self.markup.add(btn1,btn2_1,btn2_2,btn5,btn95)
+        self.markup.add(btn1,btn2_1,btn2_2,btn5)
         
         self.markup2 = types.ReplyKeyboardMarkup(resize_keyboard=True)
         btn1 = types.KeyboardButton("Добавить аккаунт")
@@ -1882,7 +1882,7 @@ class Bot:
         #btn4 = types.KeyboardButton("Вывести пользователей")
         btn5 = types.KeyboardButton("Дай почту")
        # btn9 = types.KeyboardButton("Рандомный прокси")
-        self.markup2.add(btn1,btn2_1,btn2_2,btn5,btn95)
+        self.markup2.add(btn1,btn2_1,btn2_2,btn5)
         
     def get_mname(self,nm):
         try:
