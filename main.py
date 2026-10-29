@@ -1389,17 +1389,17 @@ class Bot:
         SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
         
         creds = None
-        if os.path.exists('/home/token.json'):
-            creds = Credentials.from_authorized_user_file('/home/token.json', SCOPES)
+        if os.path.exists(GOOGLE_REAL_TOKEN):
+            creds = Credentials.from_authorized_user_file(GOOGLE_REAL_TOKEN, SCOPES)
             
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
                 # Если токена нет, это упадет на сервере без браузера, но оставим как есть
-                flow = InstalledAppFlow.from_client_secrets_file('/home/credentials.json', SCOPES)
+                flow = InstalledAppFlow.from_client_secrets_file(GOOGLE_CREDS, SCOPES)
                 creds = flow.run_local_server(port=0)
-            with open('/home/token.json', 'w') as token:
+            with open(GOOGLE_REAL_TOKEN, 'w') as token:
                 token.write(creds.to_json())
 
         service = build('gmail', 'v1', credentials=creds)
@@ -1751,38 +1751,6 @@ class Bot:
         
         return text
     
-    def check_and_start_bot(self,message):
-        if "work" in message.text:
-            self.my_bot.send_message(message.from_user.id, "Поздравляю, вы душнила!")
-        # Проверяем, работает ли процесс bot_end.py
-        grep_process = subprocess.Popen(['ps', 'ax'], stdout=subprocess.PIPE)
-        check_process = subprocess.Popen(['grep', 'final_bot4.py'], stdin=grep_process.stdout, stdout=subprocess.PIPE)
-        grep_process.stdout.close()
-        output = check_process.communicate()[0]
-        
-        # Если bot_end.py не найден в процессах (кроме самого grep), запускаем его
-        if output.count(b'final_bot4.py')<2:
-            self.my_bot.send_message(message.from_user.id, "Бот и правда не работает...")
-            # Запускаем скрипт через nohup
-            with open(os.devnull, 'w') as devnull:
-                subprocess.Popen(
-                    ['nohup', '/project/bin/python', '/home/final_bot4.py', '&'],
-                    stdout=devnull,
-                    stderr=devnull,
-                    preexec_fn=os.setpgrp
-                )
-            grep_process = subprocess.Popen(['ps', 'ax'], stdout=subprocess.PIPE)
-            check_process = subprocess.Popen(['grep', 'final_bot4.py'], stdin=grep_process.stdout, stdout=subprocess.PIPE)
-            grep_process.stdout.close()
-            output = check_process.communicate()[0]
-            
-            # Если bot_end.py не найден в процессах (кроме самого grep), запускаем его
-            if output.count(b'final_bot4.py')<2:
-                self.my_bot.send_message(message.from_user.id, "Бот не запущен. Звоните кодеру. Он еблан")
-            else:
-                self.my_bot.send_message(message.from_user.id, "Бот успешно запущен")
-        else:
-            self.my_bot.send_message(message.from_user.id, "Бот и так работает")
         
     def give_your_password(self, name):
         byaka = False
@@ -3021,10 +2989,7 @@ def get_text_messages(message):
                 except Exception as e:
                     bot.my_bot.reply_to(message, f"Ошибка при отправке видео: {e}")
 
-    
-            elif "/work" in message.text.lower() or ("работай" in message.text.lower() and "бля" in message.text.lower()):
-                bot.my_bot.send_message(message.from_user.id,"Нет")
-                #bot.check_and_start_bot(message)
+
 
             
             elif message.text=='/max_sorry':
