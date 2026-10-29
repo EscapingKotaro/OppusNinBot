@@ -6,23 +6,14 @@ services:
       - .env
     restart: unless-stopped
     volumes:
-      # Сохраняем базы данных shelve
-      - bot2_data:/app/data
-      # Сохраняем ключи и видео между перезапусками
-      - bot2_keys:/app/keys
-      - bot2_video:/app/video
+      # Пробрасываем существующие папки с сервера в контейнер
+      - ./keys:/app/keys      # <--- ГЛАВНОЕ ИСПРАВЛЕНИЕ
+      - ./data:/app/data      # Чтобы базы shelve сохранялись
+      - ./video:/app/video    # Чтобы видео были доступны
     ports:
-      - "9091:9090"  # Порт для Prometheus (отличный от первого бота!)
+      - "9091:9090"           # Порт для метрик Prometheus
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
-
-volumes:
-  bot2_data:
-    name: bot2_data_volume
-  bot2_keys:
-    name: bot2_keys_volume
-  bot2_video:
-    name: bot2_video_volume
