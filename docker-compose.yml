@@ -6,10 +6,9 @@ services:
       - .env
     restart: unless-stopped
     volumes:
-      # Пробрасываем существующие папки с сервера в контейнер
-      - ./keys:/app/keys      # <--- ГЛАВНОЕ ИСПРАВЛЕНИЕ
-      - ./data:/app/data      # Чтобы базы shelve сохранялись
-      - ./video:/app/video    # Чтобы видео были доступны
+      - ./keys:/app/keys     
+      - ./data:/app/data      
+      - ./video:/app/video   
     ports:
       - "9091:9090"           # Порт для метрик Prometheus
     logging:
