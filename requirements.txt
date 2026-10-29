@@ -12,3 +12,4 @@ opencv-python-headless==4.9.0.80
 numpy==1.26.4
 pyzbar==0.1.9
 prometheus-client==0.20.0
+schedule==1.2.1
