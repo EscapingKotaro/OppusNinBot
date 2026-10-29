@@ -26,7 +26,8 @@ AEGIS_API_KEY = os.getenv("AEGIS_API_KEY")
 
 
 GOOGLE_TOKEN = 'keys/cyndyk71-2c2122475ee2.json'
-
+GOOGLE_REAL_TOKEN = "keys/token.json"
+GOOGLE_CREDS = "keys/credentials.json"
 
 ADMIN_DATA_SHELVE = "data/admin-data"
 BOT_END_DATA_SHELVE = "data/bot_end_data"
