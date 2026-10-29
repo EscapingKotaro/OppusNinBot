@@ -8,3 +8,6 @@ venv/
 *.shelve
 data/
 keys/
+video/
+images/
+photos/
