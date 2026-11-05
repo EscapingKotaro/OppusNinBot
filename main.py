@@ -2308,7 +2308,7 @@ class Bot:
             self.imt(message.from_user.id,str(traceback.format_exc()))
             debag(traceback.format_exc())
 bot=Bot()
-api = CyndykShopAPI_key  
+api = CyndykShopAPI(CyndykShopAPI_key)
 
 
 @bot.my_bot.message_handler(content_types=['photo'])
