@@ -3,9 +3,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BOT_TOKEN = os.getenv("BOT_token3")
+BOT_TOKEN = os.getenv("BOT_token1")
 BOT_TOKEN2 = os.getenv("BOT_token2")
-BOT_TOKEN3 = os.getenv("BOT_token1")
+BOT_TOKEN3 = os.getenv("BOT_token3")
 
 CyndykShopAPI_key = os.getenv("CyndykShopAPI_key")
 NintendoAccountManager_login = os.getenv("NintendoAccountManager_login")
