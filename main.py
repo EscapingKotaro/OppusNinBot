@@ -489,7 +489,7 @@ class CyndykShopAPI:
         payload = {"UUID": task_id}
         
         try:
-            response = requests.post(url, json=payload, headers=self.headers, timeout=30)
+            response = requests.post(url, json=payload, headers=self.headers, timeout=90)
             
             # === 200: Успешный ответ со статусом ===
             if response.status_code == 200:
@@ -593,13 +593,13 @@ class CyndykShopAPI:
         
         except requests.exceptions.Timeout:
             return self._status_error(
-                "Сервер статуса не ответил вовремя. Повторите запрос позже.",
+                "Сервер AMS не ответил вовремя. Повторите запрос позже.",
                 error_code="Timeout",
                 retryable=True,
             )
         except requests.exceptions.ConnectionError:
             return self._status_error(
-                "Не удалось подключиться к серверу статуса",
+                "Не удалось подключиться к серверу AMS",
                 error_code="ConnectionError",
                 retryable=True,
             )
@@ -2315,9 +2315,9 @@ api = CyndykShopAPI(CyndykShopAPI_key)
 def get_photo(message):
     
         if str(message.from_user.id) in bad_boys:
-            bot.my_bot.send_message(message.from_user.id,'Я сплю')
-        elif bot.is_night_time() and str(message.from_user.id) not in bot.cool_boys:
-            bot.my_bot.send_message(message.from_user.id,'Я сплю')
+            bot.my_bot.send_message(message.from_user.id,'Я сплю. Ты мне не нравишься')
+     #   elif bot.is_night_time() and str(message.from_user.id) not in bot.cool_boys:
+     #       bot.my_bot.send_message(message.from_user.id,'Я сплю')
         elif bot.users.get(str(message.from_user.id),{'route':''})['route']=='add_acc#3':
             markupin=types.InlineKeyboardMarkup()
             markupin.add(types.InlineKeyboardButton('Пропустить пункт',callback_data='skip_'+str(message.from_user.id)))
@@ -2505,10 +2505,10 @@ def get_text_messages(message):
             
 
 
-            if (str(message.from_user.id) in bad_boys  and str(message.from_user.id) not in  bot.cool_boys) or str(message.from_user.id) not in bot.ids:
-                bot.my_bot.send_message(message.from_user.id,'Я сплю')
-            elif bot.is_night_time() and str(message.from_user.id) not in bot.cool_boys:
-                bot.my_bot.send_message(message.from_user.id,'Я сплю')
+            if (str(message.from_user.id) in bad_boys  and str(message.from_user.id) not in bot.cool_boys) or str(message.from_user.id) not in bot.ids:
+                bot.my_bot.send_message(message.from_user.id,'Я сплю. Ты мне не нравишься')
+           # elif bot.is_night_time() and str(message.from_user.id) not in bot.cool_boys:
+          #      bot.my_bot.send_message(message.from_user.id,'Я сплю')
           
             elif message.text=='/adbot2_mail' and str(message.from_user.id) in bot.ids:
                 bot.adbot2_mail()
