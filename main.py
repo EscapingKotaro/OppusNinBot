@@ -1112,6 +1112,7 @@ class Bot:
             creds = Credentials.from_authorized_user_file(GOOGLE_REAL_TOKEN, SCOPES)
             
         if not creds or not creds.valid:
+            self.my_bot.send_message(for_reports, "not creds or not creds.valid")
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
