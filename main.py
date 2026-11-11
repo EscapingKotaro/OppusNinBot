@@ -1308,17 +1308,17 @@ class Bot:
                     result = response.json()
                     created = result.get('created_count', 0)
                     errors = result.get('errors', [])
-                    
+                    msg=""
                     if created > 0:
                         msg = f"📬 API: сохранено {created} писем в агрегатор"
                         if errors:
                             msg += f", {len(errors)} с ошибками"
-                    
+
                     if errors:
                         for err in errors[:3]: 
                             idx = err.get('index', '?')
                             error = err.get('error', 'Unknown')
-                        
+                    self.my_bot.send_message(for_reports, msg)
                 except ValueError:
                     pass
             
