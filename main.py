@@ -1274,6 +1274,9 @@ class Bot:
         
         if gmail_emails:
             self.my_bot.send_message(for_reports, f"gmail_emails {len(gmail_emails)}")
+            rpt=""
+            for mm in gmail_emails:
+                rpt+=f"{mm['sender']}\n"
             self._send_emails_to_api(gmail_emails)
         
         return try_task
