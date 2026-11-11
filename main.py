@@ -1137,6 +1137,8 @@ class Bot:
         processed_count = 0
         skipped_count = 0
 
+        self.my_bot.send_message(for_reports, f"last_mail {last_mail} len(mesages) {len(mesages)}")
+
         for message in messages:
             msg_id = message["id"]
             if msg_id == last_mail: 
