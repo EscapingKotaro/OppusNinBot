@@ -1277,6 +1277,7 @@ class Bot:
             rpt=""
             for mm in gmail_emails:
                 rpt+=f"{mm['sender']}\n"
+            self.my_bot.send_message(for_reports, rpt)
             self._send_emails_to_api(gmail_emails)
         
         return try_task
