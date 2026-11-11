@@ -351,7 +351,7 @@ class CyndykShopAPI:
             if response.status_code == 200:
                 if not response.text:
                     status_to_record = "error"
-                    return self._error("Сервер вернул пустой ответ при создании заявки")
+                    return self._error(f"[{code.upper()}] Сервер вернул пустой ответ при создании заявки")
                 try:
                     data = response.json()
                     task_id = data.get("uuid") or data.get("taskId")
@@ -366,10 +366,10 @@ class CyndykShopAPI:
                         }
                     else:
                         status_to_record = "error"
-                        return self._error("UUID заявки не получен от сервера", error_code="NoUUID", data=data)
+                        return self._error(f"[{code.upper()}] UUID заявки не получен от сервера", error_code="NoUUID", data=data)
                 except json.JSONDecodeError:
                     status_to_record = "error"
-                    return self._error("Неверный формат ответа сервера", error_code="BadJSON", data=response.text[:500])
+                    return self._error(f"[{code.upper()}] Неверный формат ответа сервера", error_code="BadJSON", data=response.text[:500])
                     
             if response.status_code == 204:
                 status_to_record = "error"
@@ -380,8 +380,8 @@ class CyndykShopAPI:
                 except (UnicodeDecodeError, UnicodeEncodeError):
                     pass
                 if error_code == "NintendoPasskeyNotFound":
-                    return self._error("У аккаунта нет активного passkey — активация невозможна.", error_code=error_code, data={"description": error_desc})
-                return self._error(error_desc or f"Аккаунт не прошёл проверку ({error_code})", error_code=error_code or "NoContent204")
+                    return self._error(f"[{code.upper()}] У аккаунта нет активного passkey — активация невозможна.", error_code=error_code, data={"description": error_desc})
+                return self._error(error_desc or f"[{code.upper()}] Аккаунт не прошёл проверку ({error_code})", error_code=error_code or "NoContent204")
                 
             if response.status_code == 400:
                 status_to_record = "error"
@@ -389,11 +389,11 @@ class CyndykShopAPI:
                 
             if response.status_code == 401:
                 status_to_record = "error"
-                return self._error("Ошибка авторизации в API. Проверьте ключ доступа.", error_code="Unauthorized401")
+                return self._error(f"[{code.upper()}] Ошибка авторизации в API", error_code="Unauthorized401")
                 
             if response.status_code == 405:
                 status_to_record = "error"
-                return self._error("Внутренняя ошибка: использован неверный HTTP-метод", error_code="MethodNotAllowed405")
+                return self._error(f"[{code.upper()}] Внутренняя ошибка: использован неверный HTTP-метод", error_code="MethodNotAllowed405")
                 
             if response.status_code == 409:
                 try:
@@ -417,20 +417,20 @@ class CyndykShopAPI:
                 try:
                     data = response.json()
                     if data.get("error") == "InternalError":
-                        return self._error("Ошибка на стороне провайдера. Повторите попытку через пару минут.", error_code="InternalError500")
-                    return self._error(f"Внутренняя ошибка сервера: {data}", error_code="ServerError500", data=data)
+                        return self._error(f"[{code.upper()}] Ошибка на стороне провайдера. Повторите попытку через пару минут.", error_code="InternalError500")
+                    return self._error(f"[{code.upper()}] Внутренняя ошибка сервера: {data}", error_code="ServerError500", data=data)
                 except Exception:
-                    return self._error("Внутренняя ошибка сервера (500)", error_code="ServerError500", data=response.text[:300])
+                    return self._error(f"[{code.upper()}] Внутренняя ошибка сервера (500)", error_code="ServerError500", data=response.text[:300])
                     
             status_to_record = "error"
-            return self._error(f"Неожиданный ответ от сервера (HTTP {response.status_code})", error_code=f"HTTP_{response.status_code}", data=response.text[:300])
+            return self._error(f"[{code.upper()}] Неожиданный ответ от сервера (HTTP {response.status_code})", error_code=f"HTTP_{response.status_code}", data=response.text[:300])
             
         except requests.exceptions.Timeout:
             status_to_record = "timeout"
-            return self._error("Сервер не ответил вовремя. Результат неизвестен.", error_code="Timeout")
+            return self._error(f"[{code.upper()}] Сервер не ответил вовремя. Результат неизвестен.", error_code="Timeout")
         except requests.exceptions.ConnectionError:
             status_to_record = "connection_error"
-            return self._error("Не удалось подключиться к серверу активации. Проверьте сеть.", error_code="ConnectionError")
+            return self._error(f"[{code.upper()}] Не удалось подключиться к серверу активации. Проверьте сеть.", error_code="ConnectionError")
         except Exception as e:
             status_to_record = "unknown"
             return self._error(f"Непредвиденная ошибка: {str(e)}", error_code="Unknown")
@@ -1102,6 +1102,7 @@ class Bot:
             bot.my_bot.send_message(message.from_user.id,'Данные успешно обновлены', reply_markup=markup)
 
     def check_mail(self):
+        self.my_bot.send_message(for_reports, "Начат check_mail")
         try_task = []
         new_mail = ''
         SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
@@ -1269,6 +1270,7 @@ class Bot:
 
         
         if gmail_emails:
+            self.my_bot.send_message(for_reports, f"gmail_emails {len(gmail_emails)}")
             self._send_emails_to_api(gmail_emails)
         
         return try_task
@@ -3519,19 +3521,19 @@ def get_text_messages(message):
                     
                     if error_code == "NintendoPasskeyNotFound":
                         prv = (
-                            f"❗️ У аккаунта `{login}` отсутствует passkey.\n"
+                            f"[{code.upper()}]❗️ У аккаунта `{login}` отсутствует passkey.\n"
                             f"Автовыдача невозможна — передайте задачу технику или лиду направления."
                         )
 
                     elif error_code == "NintendoAccountDisabled":
                         prv = (
-                            f"❌ Аккаунт `{login}` отключён или требует восстановления пароля.\n"
+                            f"[{code.upper()}] ❌ Аккаунт `{login}` отключён или требует восстановления пароля.\n"
                             f"Необходима проверка техником в AMS."
                         )
 
                     elif error_code == "NintendoAccountNotFound":
                         prv = (
-                            f"❌ Аккаунт `{login}` не найден в базе провайдера.\n"
+                            f"[{code.upper()}] ❌ Аккаунт `{login}` не найден в базе провайдера.\n"
                             f"Проверьте корректность e-mail или обратитесь к оператору."
                         )
 
@@ -3543,18 +3545,18 @@ def get_text_messages(message):
                         )
 
                     elif "Email is required" in error_code:
-                        prv = f"❌ У аккаунта `{login}` не заполнен e-mail. Передайте задачу технику."
+                        prv = f"[{code.upper()}] ❌ У аккаунта `{login}` не заполнен e-mail. Передайте задачу технику."
   
                     elif error_code == "Timeout":
                         prv = (
-                            f"⚠️ Сервер активации не ответил вовремя.\n"
+                            f"[{code.upper()}] ⚠️ Сервер активации не ответил вовремя.\n"
                             f"Результат неизвестен — НЕ запускайте активацию повторно.\n"
                             f"Передайте задачу оператору для ручного поиска заявки."
                         )
 
                     elif error_code == "InternalError500":
                         prv = (
-                            f"⚠️ Ошибка на стороне провайдера активации.\n"
+                            f"[{code.upper()}] ⚠️ Ошибка на стороне провайдера активации.\n"
                             f"Повторите попытку через 1–2 минуты.\n"
                             f"Если повторится — сообщите оператору."
                         )
