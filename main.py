@@ -1102,7 +1102,6 @@ class Bot:
             bot.my_bot.send_message(message.from_user.id,'Данные успешно обновлены', reply_markup=markup)
 
     def check_mail(self):
-        self.my_bot.send_message(for_reports, "Начат check_mail")
         try_task = []
         new_mail = ''
         SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
