@@ -1255,7 +1255,7 @@ class Bot:
                     'recipient': final_recipient, 
                     'subject': subject,
                     'body': body_text,
-                    'received_at': datetime.now(pytz.UTC).isoformat()
+                    'received_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 })
                 processed_count += 1
 
@@ -1328,15 +1328,20 @@ class Bot:
                     error_msg = err_data.get('error', 'Validation failed')
                     errors_detail = err_data.get('errors', [])
                     
-                    msg = f"❌ API: ошибка валидации - {error_msg}"
+                    msg = f"❌ API: ошибка валидации - {error_msg}\n"
                     if errors_detail:
-                        msg += f" ({len(errors_detail)} писем отклонено)"
-                    self.my_bot.send_message(for_reports, msg)
+                        msg += f"Отклонено писем: {len(errors_detail)}\n"
+                        # ДОБАВЛЯЕМ ВЫВОД ПЕРВЫХ 2-х ОШИБОК, ЧТОБЫ ПОНЯТЬ ПРИЧИНУ
+                        for err in errors_detail[:2]:
+                            idx = err.get('index', '?')
+                            err_text = err.get('error', 'Unknown')
+                            msg += f"  - Письмо {idx}: {err_text}\n"
                     
+                    self.my_bot.send_message(for_reports, msg)
                 except ValueError:
                     self.my_bot.send_message(
                         for_reports,
-                        f"❌ API: ошибка 400 - {response.text[:100]}"
+                        f"❌ API: ошибка 400 - {response.text[:200]}" # Увеличил лимит символов
                     )
             
             elif response.status_code == 401:
