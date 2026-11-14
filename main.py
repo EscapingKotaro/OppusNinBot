@@ -1861,9 +1861,9 @@ class Bot:
             response = requests.post(url, headers=self.ams.headers, json=data, timeout=30)
             if response.status_code == 200:
                 return response.json()
-            self._log_error("search_nintendo", f"HTTP {response.status_code}: {response.text[:200]}")
+            self.my_bot.send_message(for_reports,f"HTTP {response.status_code}: {response.text[:200]}")
         except Exception as e:
-            self._log_error("search_nintendo", str(e))
+            self.my_bot.send_message(for_reports,str(e))
         return {"ok": False, "items": []}
                 
     def au_new_admin3(self,message):
