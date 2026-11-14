@@ -819,23 +819,6 @@ class Bot:
             return result
         return None
 
-    def get_vhody(self, acc):
-        a = acc.get('logins30d', 0)
-        b = acc.get('loginsTotal', 0)
-        
-        key = str(self.get_day())
-        bb = 0
-        cc = 0
-        for key2 in acc.get('Входы', {}):
-            try:
-                if int(key) - int(key2) <= 30:
-                    bb += acc['Входы'][key2]
-                cc += acc['Входы'][key2]
-            except (ValueError, TypeError):
-                bb,cc = 0, 0
-        
-        return max(a,bb),max(b,cc)
-
 
 
     def check_date(self,input_string):
@@ -1800,39 +1783,34 @@ class Bot:
                 break
             
             try:
-                # Проверяем, откуда брать аккаунт
-                if a[1] in bot.nintendo_cache:
-                    acc = bot.nintendo_cache[a[1]]
-                    usage_counts = acc.get('api_usage_counts', {})
-                    total = usage_counts.get('total', 0)
-                    aa = total
-                    b = total
-                else:
-                    acc = bot.accs[a[1]]
-                    aa, b = bot.get_vhody(acc)
-                
-                txt2 = f'{acc["Имя"]} - {acc["Почта"]} (входов: {aa})\n\n' + a[0]
-                
-                txt2 += bot.check_date(acc['Дополнительно'].lower())
-                try:
-                    today = datetime.now().date()
-                    date_str = acc.get("Очищено", "15.05.2020")
-                    other_date = datetime.strptime(date_str, "%d.%m.%Y").date()
-                    delta = today - other_date  
-                    delta = delta.days
-                except:
-                    pass
-                delta=999  
-                if delta <= 30:
-                    txt2 = "🧹 Внимание! Входы очищались " + acc.get("Очищено", "15.05.2020") + " (" + str(delta) + " дней назад)\n" + txt2
-                if 'основа' in acc['Дополнительно'].lower():
-                    txt2 = '⚠️ ' + txt2
+                acc = bot.nintendo_cache[a[1]]
+                usage_counts = acc.get('api_usage_counts', {})
+                total = usage_counts.get('total', 0)
+                aa = total
+                b = total
 
-                login="-"
+                #####
+                login = ""
                 for accn in self.accs:
                     if acc["Почта"] == self.accs[accn]["Почта"]:
                         login = accn
                         break
+                if login:
+                    ams_acc = self.ams_get_acc_by_login(login)
+                    if ams_acc:
+                        b = ams_acc.get('logins30d', 0)
+                        c = ams_acc.get('loginsTotal', 0)
+                        last_login = ams_acc.get('lastLogins', '-')
+                #####
+                
+                txt2 = f'{login} - {acc["Почта"]} ({b}/{c})\n\n' + a[0]
+                
+                txt2 += bot.check_date(acc['Дополнительно'].lower())
+
+                if 'основа' in acc['Дополнительно'].lower():
+                    txt2 = '⚠️ ' + txt2
+
+                
 
                 markupin = types.InlineKeyboardMarkup()
                 markupin.add(types.InlineKeyboardButton('Инфо', callback_data='info_'+login+str('_')+str(user)))
@@ -2674,15 +2652,7 @@ def get_text_messages(message):
                 markupin.add(types.InlineKeyboardButton('Отменить добавление',callback_data='gback_'+str(message.from_user.id)))
                 bot.users[str(message.from_user.id)]['route']='add_acc#0'
                 bot.my_bot.send_message(message.from_user.id,'Введите название нового аккаунта', reply_markup=markupin)
-            elif message.text=="Вывести аккаунты":
-                bot.users[str(message.from_user.id)]['route']=''
-                txt=''
-                
-                for a in bot.accs:
-                    acc=bot.accs[a]
-                    b, c = bot.get_vhody(acc)
-                    txt+=a+': '+acc.get('Пароль','***')+' (пароль), '+acc.get('Почта','')+'. Игр: '+str(len(acc.get('Игры','')))+'. Входы: ('+str(b)+'/'+str(c)+'). Дополнительно:'+acc.get('Дополнительно','')+' --> /settings_'+a+'\n'
-                bot.my_bot.send_message(message.from_user.id,txt, reply_markup=markup)
+
             elif '/settings_' in message.text:
                 a=message.text[10:]
                 try:
