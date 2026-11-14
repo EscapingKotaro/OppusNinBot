@@ -2884,10 +2884,10 @@ def get_text_messages(message):
                     # Очищаем текст
                     txt3 = []
                     for t in txt:
-                        txt2 = ''
-                        for su in t:
-                            if su in '1234567890qwertyuiopasdfghjklzxcvbnm+':
-                                txt2 += su
+                        txt2 = t
+                      #  for su in t:
+                       #     if su in '1234567890qwertyuiopasdfghjklzxcvbnm+':
+                       #         txt2 += su
                         if len(txt2) > 1:
                             txt3.append(txt2)
                     
