@@ -1813,12 +1813,12 @@ class Bot:
                     txt2 = '⚠️ ' + txt2
 
                 
-
-                markupin = types.InlineKeyboardMarkup()
-                markupin.add(types.InlineKeyboardButton('Инфо', callback_data='info_'+login+str('_')+str(user)))
-                bot.my_bot.send_message(user, txt2, reply_markup=markupin)
-                if dlen > 20:
-                    time.sleep(random.randint(3, 8)/10)
+                if login:
+                    markupin = types.InlineKeyboardMarkup()
+                    markupin.add(types.InlineKeyboardButton('Инфо', callback_data='info_'+login+str('_')+str(user)))
+                    bot.my_bot.send_message(user, txt2, reply_markup=markupin)
+                    if dlen > 20:
+                        time.sleep(random.randint(3, 8)/10)
             except Exception as e:
                 bot.my_bot.send_message(for_reports, traceback.format_exc())
                 bot.imt(user, str(traceback.format_exc()))
