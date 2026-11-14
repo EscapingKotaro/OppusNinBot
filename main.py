@@ -1811,7 +1811,7 @@ class Bot:
                     acc = bot.accs[a[1]]
                     aa, b = bot.get_vhody(acc)
                 
-                txt2 = a[1] + ' (' + str(aa) + '/' + str(b) + ')\n\n' + a[0]
+                txt2 = f'{acc["Имя"]} - {acc["Почта"]} (входов: {aa})\n\n' + a[0]
                 
                 txt2 += bot.check_date(acc['Дополнительно'].lower())
                 try:
@@ -1827,8 +1827,15 @@ class Bot:
                     txt2 = "🧹 Внимание! Входы очищались " + acc.get("Очищено", "15.05.2020") + " (" + str(delta) + " дней назад)\n" + txt2
                 if 'основа' in acc['Дополнительно'].lower():
                     txt2 = '⚠️ ' + txt2
+
+                login="-"
+                for accn in self.accs:
+                    if acc["Почта"] == self.accs[accn]["Почта"]:
+                        login = accn
+                        break
+
                 markupin = types.InlineKeyboardMarkup()
-                markupin.add(types.InlineKeyboardButton('Инфо', callback_data='info_'+a[1]+str('_')+str(user)))
+                markupin.add(types.InlineKeyboardButton('Инфо', callback_data='info_'+login+str('_')+str(user)))
                 bot.my_bot.send_message(user, txt2, reply_markup=markupin)
                 if dlen > 20:
                     time.sleep(random.randint(3, 8)/10)
@@ -2827,6 +2834,8 @@ def get_text_messages(message):
                             games_text = "\n".join(games_list)
                             bot.nintendo_cache[acc_id] = {
                                 "Данные": item.get("email", ""),
+                                "Почта": item.get("email", ""),
+                                "Имя": item.get("name", ""),
                                 "Игры": games_text,
                                 "Дополнительно": "основа",
                                 "Очищено": "",
@@ -2922,6 +2931,8 @@ def get_text_messages(message):
                         
                         bot.nintendo_cache[acc_id] = {
                             "Данные": item.get("email", ""),
+                            "Почта": item.get("email", ""),
+                            "Имя": item.get("name", ""),
                             "Игры": games_text,
                             "Дополнительно": "основа" if item.get("isPrimary") else "",
                             "Очищено": "",
