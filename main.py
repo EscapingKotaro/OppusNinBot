@@ -2815,7 +2815,7 @@ def get_text_messages(message):
                 
                 # Отдельная ветка для ". основа"
                 if ". основа" in txt:
-                    response = self.search_nintendo_accounts("", only_prem=True, is_deleted=False)
+                    response = bot.search_nintendo_accounts("", only_prem=True, is_deleted=False)
                     if response.get("ok"):
                         for item in response.get("items", []):
                             acc_id = item.get("id")
@@ -2881,7 +2881,7 @@ def get_text_messages(message):
                     matched_words = {}
                     
                     for word in txt:
-                        response = self.search_nintendo_accounts(word, only_prem=main, is_deleted=False, max_games = max_games)
+                        response = bot.search_nintendo_accounts(word, only_prem=main, is_deleted=False, max_games = max_games)
                         if response.get("ok"):
                             for item in response.get("items", []):
                                 acc_id = item.get("id")
