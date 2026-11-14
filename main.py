@@ -1814,11 +1814,15 @@ class Bot:
                 txt2 = a[1] + ' (' + str(aa) + '/' + str(b) + ')\n\n' + a[0]
                 
                 txt2 += bot.check_date(acc['Дополнительно'].lower())
-                today = datetime.now().date()
-                date_str = acc.get("Очищено", "15.05.2020")
-                other_date = datetime.strptime(date_str, "%d.%m.%Y").date()
-                delta = today - other_date  
-                delta = delta.days     
+                try:
+                    today = datetime.now().date()
+                    date_str = acc.get("Очищено", "15.05.2020")
+                    other_date = datetime.strptime(date_str, "%d.%m.%Y").date()
+                    delta = today - other_date  
+                    delta = delta.days
+                except:
+                    pass
+                delta=999  
                 if delta <= 30:
                     txt2 = "🧹 Внимание! Входы очищались " + acc.get("Очищено", "15.05.2020") + " (" + str(delta) + " дней назад)\n" + txt2
                 if 'основа' in acc['Дополнительно'].lower():
