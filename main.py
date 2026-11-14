@@ -1858,6 +1858,11 @@ class Bot:
             data["maxGames"]=max_games
         try:
             response = requests.post(url, headers=self.ams.headers, json=data, timeout=30)
+            try:
+                self.my_bot.send_message(for_reports,str(data))
+                self.my_bot.send_message(for_reports,f"HTTP {response.status_code}: {response.text[:3000]}")
+            except:
+                pass
             if response.status_code == 200:
                 return response.json()
             self.my_bot.send_message(for_reports,f"HTTP {response.status_code}: {response.text[:200]}")
