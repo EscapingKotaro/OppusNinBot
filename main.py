@@ -707,6 +707,8 @@ class Bot:
         self.tegs={"Red Dead Redemption":"#rdr"}
         self.maks_tek=db.get('maks_tek',{})
 
+        self.nintendo_cache = {}
+
         db.close()
         
         
@@ -1773,55 +1775,85 @@ class Bot:
             self.users[str(message.from_user.id)]['route']='au_new_admin2'
             self.my_bot.send_message(message.from_user.id,'Введите имя нового администратора. Например, 👤 Николай (@tg_kolya)')
 
-    def draw_page(self,arro,start,dlen,user):
-        ind=0
-        if len(arro)<start:
-            bot.my_bot.send_message(user,"--- Это всё! ---")
+    def draw_page(self, arro, start, dlen, user):
+        ind = 0
+        if len(arro) < start:
+            bot.my_bot.send_message(user, "--- Это всё! ---")
             return
         
-        arro2=arro[start:]
+        arro2 = arro[start:]
         time.sleep(0.8)
-        if dlen==23:
-            dlen=len(arro2)
+        if dlen == 23:
+            dlen = len(arro2)
 
         for a in arro2:
-            ind+=1
-            if ind>dlen:
-
-                sts=f"Найдено еще {len(arro2)-dlen} аккаунтов. Продолжить?"
-                markupin=types.InlineKeyboardMarkup()
-                markupin.add(types.InlineKeyboardButton('Продолжить',callback_data='pagisosi_'+str(user)))
-                if (len(arro2)-dlen)>20: markupin.add(types.InlineKeyboardButton('Показать всё',callback_data='pagisosimnogo_'+str(user)))
-                markupin.add(types.InlineKeyboardButton('Отмена',callback_data='pagidie_'+str(user)))
-                self.page[str(user)]=start+dlen
-                bot.my_bot.send_message(user,sts, reply_markup=markupin)
+            ind += 1
+            if ind > dlen:
+                sts = f"Найдено еще {len(arro2)-dlen} аккаунтов. Продолжить?"
+                markupin = types.InlineKeyboardMarkup()
+                markupin.add(types.InlineKeyboardButton('Продолжить', callback_data='pagisosi_'+str(user)))
+                if (len(arro2)-dlen) > 20:
+                    markupin.add(types.InlineKeyboardButton('Показать всё', callback_data='pagisosimnogo_'+str(user)))
+                markupin.add(types.InlineKeyboardButton('Отмена', callback_data='pagidie_'+str(user)))
+                self.page[str(user)] = start + dlen
+                bot.my_bot.send_message(user, sts, reply_markup=markupin)
                 break
-
             
             try:
-                acc=bot.accs[a[1]]
-                aa, b = bot.get_vhody(acc)
-                txt2=a[1]+' ('+str(aa)+'/'+str(b)+')\n\n'+a[0]
-                        
-                txt2+=bot.check_date(acc['Дополнительно'].lower())
+                # Проверяем, откуда брать аккаунт
+                if a[1] in bot.nintendo_cache:
+                    acc = bot.nintendo_cache[a[1]]
+                    usage_counts = acc.get('api_usage_counts', {})
+                    total = usage_counts.get('total', 0)
+                    aa = total
+                    b = total
+                else:
+                    acc = bot.accs[a[1]]
+                    aa, b = bot.get_vhody(acc)
+                
+                txt2 = a[1] + ' (' + str(aa) + '/' + str(b) + ')\n\n' + a[0]
+                
+                txt2 += bot.check_date(acc['Дополнительно'].lower())
                 today = datetime.now().date()
-                date_str = acc.get("Очищено","15.05.2020")
+                date_str = acc.get("Очищено", "15.05.2020")
                 other_date = datetime.strptime(date_str, "%d.%m.%Y").date()
                 delta = today - other_date  
                 delta = delta.days     
-                if delta <=30:
-                    txt2="🧹 Внимание! Входы очищались "+acc.get("Очищено","15.05.2020")+" ("+str(delta)+" дней назад)\n"+txt2
+                if delta <= 30:
+                    txt2 = "🧹 Внимание! Входы очищались " + acc.get("Очищено", "15.05.2020") + " (" + str(delta) + " дней назад)\n" + txt2
                 if 'основа' in acc['Дополнительно'].lower():
-                    txt2='⚠️ '+txt2
-                markupin=types.InlineKeyboardMarkup()
-                markupin.add(types.InlineKeyboardButton('Инфо',callback_data='info_'+a[1]+str('_')+str(user)))
-                bot.my_bot.send_message(user,txt2, reply_markup=markupin)
-                if dlen>20: time.sleep(random.randint(3,8)/10)
+                    txt2 = '⚠️ ' + txt2
+                markupin = types.InlineKeyboardMarkup()
+                markupin.add(types.InlineKeyboardButton('Инфо', callback_data='info_'+a[1]+str('_')+str(user)))
+                bot.my_bot.send_message(user, txt2, reply_markup=markupin)
+                if dlen > 20:
+                    time.sleep(random.randint(3, 8)/10)
             except Exception as e:
-                bot.my_bot.send_message(for_reports,traceback.format_exc())
-                bot.imt(user,str(traceback.format_exc()))
-        if ind<=dlen:
-            bot.my_bot.send_message(user,"--- Это всё! ---")
+                bot.my_bot.send_message(for_reports, traceback.format_exc())
+                bot.imt(user, str(traceback.format_exc()))
+        if ind <= dlen:
+            bot.my_bot.send_message(user, "--- Это всё! ---")
+
+    def search_nintendo_accounts(self, game_query, only_prem=False, is_deleted=False, max_games=-1):
+        """Поиск аккаунтов Nintendo по игре"""
+        url = f"{self.ams.base_url}/api/ams/accounts/search"
+        data = {
+            "platform": "Nintendo",
+            "game": game_query,
+            "onlyPrem": only_prem,
+            "isDeleted": is_deleted,
+            "maxGames": max_games
+        }
+        if max_games!=-1:
+            data["maxGames"]=max_games
+        try:
+            response = requests.post(url, headers=self.headers, json=data, timeout=30)
+            if response.status_code == 200:
+                return response.json()
+            self._log_error("search_nintendo", f"HTTP {response.status_code}: {response.text[:200]}")
+        except Exception as e:
+            self._log_error("search_nintendo", str(e))
+        return {"ok": False, "items": []}
                 
     def au_new_admin3(self,message):
             txt=message.text
@@ -2776,160 +2808,138 @@ def get_text_messages(message):
                     bot.imt(message.from_user.id,str(traceback.format_exc()))
                     debag(traceback.format_exc())
             
-            elif bot.users.get(str(message.from_user.id),{'route':''})['route']=='find_game':
-                bot.users.get(str(message.from_user.id),{'route':''})['route']=''
-                txt=message.text
-                arro=[]
+            elif bot.users.get(str(message.from_user.id), {'route': ''})['route'] == 'find_game_nintendo':
+                bot.users.get(str(message.from_user.id), {'route': ''})['route'] = ''
+                txt = message.text
+                arro = []
+                
+                # Отдельная ветка для ". основа"
                 if ". основа" in txt:
-                    ksgm=[]
-                    for acc in bot.accs:
-                        _, b = bot.get_vhody(bot.accs[acc]) 
-                        ksgm.append([b, len(bot.accs[acc].get('Игры','')), acc])
-                    ksgm.sort()
-                    for acc in ksgm:
-                        if 'основа' in bot.accs[acc[2]]['Дополнительно']:
-                            games=bot.accs[acc[2]]['Игры']
-                            arro.append([games,acc[2]])
+                    response = ams_client.search_nintendo_accounts("", only_prem=True, is_deleted=False)
+                    if response.get("ok"):
+                        for item in response.get("items", []):
+                            acc_id = item.get("id")
+                            games_list = [g.get("title", "") for g in item.get("gameList", [])]
+                            games_text = "\n".join(games_list)
+                            bot.nintendo_cache[acc_id] = {
+                                "Данные": item.get("email", ""),
+                                "Игры": games_text,
+                                "Дополнительно": "основа",
+                                "Очищено": "",
+                                "api_usage_counts": item.get("usageCounts", {}),
+                                "isLocked": item.get("isLocked", False),
+                                "isDeleted": item.get("isDeleted", False)
+                            }
+                            arro.append([games_text, acc_id])
                 else:
-                    main=False
-                    solo=False
-                    duo=False
-                    hteg=""
+                    # Основная логика поиска
+                    main = False
+                    solo = False
+                    duo = False
+                    hteg = ""
+                    max_games=-1
+                    
                     if 'основа' in txt:
-                        ind=txt.find("основа")
-                        txt=txt[:ind]+txt[ind+6:]
-                        main=True
+                        ind = txt.find("основа")
+                        txt = txt[:ind] + txt[ind+6:]
+                        main = True
                     if 'сольник' in txt:
-                        ind=txt.find("сольник")
-                        txt=txt[:ind]+txt[ind+7:]
-                        solo=True
+                        ind = txt.find("сольник")
+                        txt = txt[:ind] + txt[ind+7:]
+                        solo = True
+                        max_games=5
                     if 'сольнтк' in txt:
-                        ind=txt.find("сольнтк")
-                        txt=txt[:ind]+txt[ind+7:]
-                        solo=True
+                        ind = txt.find("сольнтк")
+                        txt = txt[:ind] + txt[ind+7:]
+                        solo = True
                     if 'варианты' in txt:
-                        ind=txt.find("варианты")
-                        txt=txt[:ind]+txt[ind+len("варианты"):]
-                        duo=True
+                        ind = txt.find("варианты")
+                        txt = txt[:ind] + txt[ind+len("варианты"):]
+                        duo = True
                     for ttytxt in txt.split():
                         if "#" in ttytxt:
-                            hteg=ttytxt
-
-
-
-                    txt=txt.lower()
-                    txt=txt.replace("\n",",")
-                    txt=txt.split(',')
-                    txt3=[]
-                    txt_switch=[]
-
-                    for t in txt:
-                        if "switch 2 edition" in t:
-                            ind=t.find("switch 2 edition")
-                            txt3.append(t[:ind]+t[ind+len("switch 2 edition"):])
-                            txt_switch.append(False)
-                        elif "switch 2" in t:
-                            ind=t.find("switch 2")
-                            txt3.append(t[:ind]+t[ind+len("switch 2"):])
-                            txt_switch.append(False)
-                        else:
-                            txt3.append(t)
-                            txt_switch.append(True)
-                    txt=txt3.copy()
-                    txt3=[]
+                            hteg = ttytxt
                     
-                    for i in range(len(txt)):
-                        t=txt[i]
-                        
-                        txt2=''
+                    txt = txt.lower()
+                    txt = txt.replace("\n", ",")
+                    txt = txt.split(',')
+                    
+                    # Очищаем текст
+                    txt3 = []
+                    for t in txt:
+                        txt2 = ''
                         for su in t:
                             if su in '1234567890qwertyuiopasdfghjklzxcvbnm+':
-                                txt2+=su
-                        if len(txt2)>1:
+                                txt2 += su
+                        if len(txt2) > 1:
                             txt3.append(txt2)
-                            
-                    arro=[]
-                    txt=txt3.copy()
-
                     
-                    ksgm=[]
-                    for acc in bot.accs:
-                        _, b = bot.get_vhody(bot.accs[acc])  
-                        ksgm.append([b, len(bot.accs[acc].get('Игры','')), acc])
-                    ksgm.sort()
-                    #
-                    for acc in ksgm:
-                        if ((main==False or 'основа' in bot.accs[acc[2]]['Дополнительно']) and solo==False) or (solo==True and 'основа' not in bot.accs[acc[2]]['Дополнительно'] and bot.accs[acc[2]]['Игры'].count('\n')<6) or (hteg!="" and hteg in bot.accs[acc[2]]['Дополнительно']):
-                            games=bot.accs[acc[2]]['Игры']
-                            
-                            gm=games.lower().split("\n")
-                            gm3=[]
-                            for gm4 in gm:
-                                gm2=''
-                                for su in gm4:
-                                    if su in '1234567890qwertyuiopasdfghjklzxcvbnm+':
-                                        gm2+=su
-                                gm3.append(gm2)
-                            gm=gm3.copy()
-                            coll=0
-                            if duo:
-                                cp=0
-                                jkl=0
-                                jij=0
-                                for t in txt:
-                                    jkl=0
-                                    for ggm in gm:
-                                        if t in ggm and t!='' and (txt_switch[jij] or "switch2" in ggm):
-                                            if "mortalkombat11" not in txt[jij] and "mortalkombat" in txt[jij] and "mortalkombat11" in ggm:
-                                                continue
-                                            
-                                            jkl+=1
-                                    jij+=1
-                                    if jkl>0:
-                                        cp+=1
-                                if cp>=2:
-                                    coll=1
-                            else:
-                                coll=1
-                                colli=[]
-                                for ij in range(len(txt)):
-                                    colli.append(0)
-                                if len(txt)==0: coll=0
-                                for ggm in gm:
-                                    for iji in range(len(txt)):
-                                        if txt[iji] in ggm and txt[iji]!='' and (txt_switch[iji] or "switch2" in ggm):
-                                            if "mortalkombat11" not in txt[iji] and "mortalkombat" in txt[iji] and "mortalkombat11" in ggm:
-                                                continue
-                                            colli[iji]=1
-                                if 0 in colli:
-                                    coll=0
-                            if acc[2] in bot.errors_acc and time.time()-120*60<bot.errors_acc[acc[2]]:
-                                coll=0
-                            if coll==1:
-                                arro.append([games,acc[2]])
-                                bot.give_teg(acc[2])
-                            #
-
-                    if len(arro)==0:
-                        txt2='Игра не найдена'
-                        bot.my_bot.send_message(message.from_user.id,txt2)
-                    else:
-                        txt2=f'Игра найдена на следующих аккаунтах ({len(arro)}):\n'
-                        bot.my_bot.send_message(message.from_user.id,txt2)
-                arromi=[]
-                for a in arro:
-                    _, b = bot.get_vhody(bot.accs[a[1]])
-                    arromi.append([b, a]) 
-                arromi.sort()
-
-                arro2=[]
-                for ab in arromi:
-                    arro2.append(ab[1])
-
-                bot.pagination[str(message.from_user.id)]=arro2
-                bot.page[str(message.from_user.id)]=10
-
-                bot.draw_page(arro2,0,10,message.from_user.id)
+                    txt = txt3.copy()
+                    
+                    # Поиск через API для каждого слова
+                    all_results = {}
+                    matched_words = {}
+                    
+                    for word in txt:
+                        response = ams_client.search_nintendo_accounts(word, only_prem=main, is_deleted=False, max_games = max_games)
+                        if response.get("ok"):
+                            for item in response.get("items", []):
+                                acc_id = item.get("id")
+                                if acc_id not in all_results:
+                                    all_results[acc_id] = item
+                                    matched_words[acc_id] = set()
+                                matched_words[acc_id].add(word)
+                    
+                    # Фильтрация по логике AND/duo
+                    filtered_results = []
+                    for acc_id, item in all_results.items():
+                        # Проверка совпадения слов
+                        if duo:
+                            if len(matched_words[acc_id]) < 2:
+                                continue
+                        else:
+                            if len(matched_words[acc_id]) != len(txt):
+                                continue
+                        
+                        # Проверка фильтров
+                     #   if solo and item.get("isPrimary"):
+                      #      continue
+                        if hteg and hteg not in str(item.get("name", "")):
+                            continue
+                        
+                        filtered_results.append(item)
+                    
+                    # Сохраняем в кеш и формируем arro
+                    bot.nintendo_cache = {}
+                    for item in filtered_results:
+                        acc_id = item.get("id")
+                        games_list = [g.get("title", "") for g in item.get("gameList", [])]
+                        games_text = "\n".join(games_list)
+                        
+                        bot.nintendo_cache[acc_id] = {
+                            "Данные": item.get("email", ""),
+                            "Игры": games_text,
+                            "Дополнительно": "основа" if item.get("isPrimary") else "",
+                            "Очищено": "",
+                            "api_usage_counts": item.get("usageCounts", {}),
+                            "isLocked": item.get("isLocked", False),
+                            "isDeleted": item.get("isDeleted", False)
+                        }
+                        arro.append([games_text, acc_id])
+                    
+                    # Сортировка по количеству входов
+                    arro.sort(key=lambda x: bot.nintendo_cache[x[1]].get("api_usage_counts", {}).get("total", 0))
+                
+                if len(arro) == 0:
+                    txt2 = 'Игра не найдена'
+                    bot.my_bot.send_message(message.from_user.id, txt2)
+                else:
+                    txt2 = f'Игра найдена на следующих аккаунтах ({len(arro)}):\n'
+                    bot.my_bot.send_message(message.from_user.id, txt2)
+                    
+                    bot.pagination[str(message.from_user.id)] = arro
+                    bot.page[str(message.from_user.id)] = 10
+                    bot.draw_page(arro, 0, 10, message.from_user.id)
 
 
                 
