@@ -2808,7 +2808,7 @@ def get_text_messages(message):
                     bot.imt(message.from_user.id,str(traceback.format_exc()))
                     debag(traceback.format_exc())
             
-            elif bot.users.get(str(message.from_user.id), {'route': ''})['route'] == 'find_game_nintendo':
+            elif bot.users.get(str(message.from_user.id), {'route': ''})['route'] == 'find_game':
                 bot.users.get(str(message.from_user.id), {'route': ''})['route'] = ''
                 txt = message.text
                 arro = []
