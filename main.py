@@ -1852,8 +1852,7 @@ class Bot:
             "platform": "Nintendo",
             "game": game_query,
             "onlyPrem": only_prem,
-            "isDeleted": is_deleted,
-            "maxGames": max_games
+            "isDeleted": is_deleted
         }
         if max_games!=-1:
             data["maxGames"]=max_games
