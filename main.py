@@ -1798,7 +1798,7 @@ class Bot:
                         login = accn
                         break
                 if login:
-                    ams_acc = self.ams_get_acc_by_login(login)
+                    ams_acc = self.get_account_id_by_email(acc["Почта"])
                     if ams_acc:
                         b = ams_acc.get('logins30d', 0)
                         c = ams_acc.get('loginsTotal', 0)
@@ -1813,12 +1813,15 @@ class Bot:
                     txt2 = '⚠️ ' + txt2
 
                 
-                if login:
+                if login and ams_acc:
                     markupin = types.InlineKeyboardMarkup()
                     markupin.add(types.InlineKeyboardButton('Инфо', callback_data='info_'+login+str('_')+str(user)))
                     bot.my_bot.send_message(user, txt2, reply_markup=markupin)
                     if dlen > 20:
                         time.sleep(random.randint(3, 8)/10)
+
+                else:
+                    bot.my_bot.send_message(for_reports, f"{login} {ams_acc}\n{txt2}")
             except Exception as e:
                 bot.my_bot.send_message(for_reports, traceback.format_exc())
                 bot.imt(user, str(traceback.format_exc()))
