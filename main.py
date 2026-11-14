@@ -1847,7 +1847,7 @@ class Bot:
         if max_games!=-1:
             data["maxGames"]=max_games
         try:
-            response = requests.post(url, headers=self.headers, json=data, timeout=30)
+            response = requests.post(url, headers=self.ams.headers, json=data, timeout=30)
             if response.status_code == 200:
                 return response.json()
             self._log_error("search_nintendo", f"HTTP {response.status_code}: {response.text[:200]}")
@@ -2815,7 +2815,7 @@ def get_text_messages(message):
                 
                 # Отдельная ветка для ". основа"
                 if ". основа" in txt:
-                    response = ams_client.search_nintendo_accounts("", only_prem=True, is_deleted=False)
+                    response = self.search_nintendo_accounts("", only_prem=True, is_deleted=False)
                     if response.get("ok"):
                         for item in response.get("items", []):
                             acc_id = item.get("id")
@@ -2881,7 +2881,7 @@ def get_text_messages(message):
                     matched_words = {}
                     
                     for word in txt:
-                        response = ams_client.search_nintendo_accounts(word, only_prem=main, is_deleted=False, max_games = max_games)
+                        response = self.search_nintendo_accounts(word, only_prem=main, is_deleted=False, max_games = max_games)
                         if response.get("ok"):
                             for item in response.get("items", []):
                                 acc_id = item.get("id")
