@@ -1800,8 +1800,8 @@ class Bot:
                 if login:
                     ams_acc = self.ams.get_account_id_by_email(acc["Почта"])
                     if ams_acc:
-                        b = ams_acc.get('logins30d', 0)
-                        c = ams_acc.get('loginsTotal', 0)
+                        b = ams_acc.get('logins30d', "?")
+                        c = ams_acc.get('loginsTotal', "?")
                         last_login = ams_acc.get('lastLogins', '-')
                 #####
                 
@@ -1813,7 +1813,7 @@ class Bot:
                     txt2 = '⚠️ ' + txt2
 
                 
-                if login and ams_acc:
+                if login and b!="?":
                     markupin = types.InlineKeyboardMarkup()
                     markupin.add(types.InlineKeyboardButton('Инфо', callback_data='info_'+login+str('_')+str(user)))
                     bot.my_bot.send_message(user, txt2, reply_markup=markupin)
