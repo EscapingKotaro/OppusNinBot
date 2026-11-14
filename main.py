@@ -1798,7 +1798,7 @@ class Bot:
                         login = accn
                         break
                 if login:
-                    ams_acc = self.get_account_id_by_email(acc["Почта"])
+                    ams_acc = self.ams.get_account_id_by_email(acc["Почта"])
                     if ams_acc:
                         b = ams_acc.get('logins30d', 0)
                         c = ams_acc.get('loginsTotal', 0)
