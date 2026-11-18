@@ -1624,12 +1624,12 @@ class Bot:
         except:
             pass
         db=shelve.open(ADMIN_DATA_SHELVE)
-        self.admins=db.get('auth',admins)
+        self.auth=db.get('auth',admins)
         self.ids=db.get('ids',ids)
         db.close()
         txt="Администраторы:\n"
-        for key in self.admins:
-            txt+=self.admins[key]+'\n'
+        for key in self.auth:
+            txt+=self.auth[key]+'\n'
         self.my_bot.send_message(message.from_user.id,txt)
 
     def is_night_time(self):
