@@ -1581,7 +1581,7 @@ class Bot:
                 # Попытка подключения с использованием ключа по умолчанию (~/.ssh/id_rsa)
                 ssh_client.connect(hostname=host, username=username, timeout=30)
     
-            self.my_bot.send_message(for_reports.id,f"Успешно подключено к {host}")
+            self.my_bot.send_message(for_reports,f"Успешно подключено к {host}")
     
             # Открываем SFTP-сессию
             sftp = ssh_client.open_sftp()
@@ -1590,20 +1590,20 @@ class Bot:
             try:
                 sftp.stat(remote_file)  # Проверка существования файла
             except FileNotFoundError:
-                self.my_bot.send_message(for_reports.id,f"Ошибка: Файл {remote_file} не найден на удалённом сервере.")
+                self.my_bot.send_message(for_reports,f"Ошибка: Файл {remote_file} не найден на удалённом сервере.")
                 sftp.close()
                 ssh_client.close()
                 return False
     
             # Копируем файл (перезапишет, если существует)
-            self.my_bot.send_message(for_reports.id,f"Копируем файл с {host}:{remote_file} в {local_file}")
+            self.my_bot.send_message(for_reports,f"Копируем файл с {host}:{remote_file} в {local_file}")
             sftp.get(remote_file, local_file)
-            self.my_bot.send_message(for_reports.id,f"Файл успешно скопирован в {local_file}")
+            self.my_bot.send_message(for_reports,f"Файл успешно скопирован в {local_file}")
     
             sftp.close()
     
         except Exception as e:
-            self.my_bot.send_message(for_reports.id,f"Ошибка при копировании файла: {e}")
+            self.my_bot.send_message(for_reports,f"Ошибка при копировании файла: {e}")
             return False
         finally:
             ssh_client.close()
