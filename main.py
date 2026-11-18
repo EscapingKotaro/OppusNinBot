@@ -1624,7 +1624,7 @@ class Bot:
         except:
             pass
         db=shelve.open(ADMIN_DATA_SHELVE)
-        self.auth=db.get('auth',admins)
+        self.auth=db.get('auth',auth)
         self.ids=db.get('ids',ids)
         db.close()
         txt="Администраторы:\n"
