@@ -1562,75 +1562,107 @@ class Bot:
         self.my_bot.send_message(message.from_user.id,txt)
     
 
-    def copy_admin_data_from_remote(self,host, username='root', private_key_path=None, password=None):
+    def copy_admin_data_from_remote(self, host, username='popugai', private_key_path=None):
         remote_file = '/home/popugai/PopugeiBot/data/admin-data'
-        local_file = ADMIN_DATA_SHELVE
-    
-        # Создаём SSH-клиент
+        local_file = ADMIN_DATA_SHELVE  
+        os.makedirs(os.path.dirname(local_file), exist_ok=True)
+        
         ssh_client = paramiko.SSHClient()
         ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    
+        
         try:
-            # Подключение
-            if private_key_path:
-                key = paramiko.RSAKey.from_private_key_file(private_key_path)
-                ssh_client.connect(hostname=host, username=username, pkey=key, timeout=30)
-            elif password:
-                ssh_client.connect(hostname=host, username=username, password=password, timeout=30)
-            else:
-                # Попытка подключения с использованием ключа по умолчанию (~/.ssh/id_rsa)
-                ssh_client.connect(hostname=host, username=username, timeout=30)
-    
-            self.my_bot.send_message(for_reports,f"Успешно подключено к {host}")
-    
-            # Открываем SFTP-сессию
+            if not private_key_path:
+                self.my_bot.send_message(for_reports, "❌ Не указан путь к SSH-ключу")
+                return False
+            
+            key = None
+            for key_class in [paramiko.Ed25519Key, paramiko.RSAKey, paramiko.ECDSAKey, paramiko.DSSKey]:
+                try:
+                    key = key_class.from_private_key_file(private_key_path)
+                    break
+                except paramiko.SSHException:
+                    continue
+            
+            if key is None:
+                self.my_bot.send_message(for_reports, f"❌ Не удалось прочитать ключ: {private_key_path}")
+                return False
+            
+            self.my_bot.send_message(for_reports, f"🔑 Подключаемся к {host} как {username}...")
+            ssh_client.connect(
+                hostname=host,
+                username=username,
+                pkey=key,
+                timeout=15,
+                look_for_keys=False,  
+                allow_agent=False     
+            )
+            
             sftp = ssh_client.open_sftp()
-    
-            # Проверяем, существует ли файл на удалённой машине
+            
+            # Проверяем файл
             try:
-                sftp.stat(remote_file)  # Проверка существования файла
+                sftp.stat(remote_file)
             except FileNotFoundError:
-                self.my_bot.send_message(for_reports,f"Ошибка: Файл {remote_file} не найден на удалённом сервере.")
+                self.my_bot.send_message(for_reports, f"❌ Файл {remote_file} не найден на удалённом сервере")
                 sftp.close()
                 ssh_client.close()
                 return False
-    
-            # Копируем файл (перезапишет, если существует)
-            self.my_bot.send_message(for_reports,f"Копируем файл с {host}:{remote_file} в {local_file}")
-            sftp.get(remote_file, local_file)
-            self.my_bot.send_message(for_reports,f"Файл успешно скопирован в {local_file}")
-    
+            
+            # Скачиваем во временный файл, потом атомарно заменяем
+            temp_file = local_file + '.tmp'
+            sftp.get(remote_file, temp_file)
             sftp.close()
-    
+            
+            # Атомарная замена (чтобы не получить битый файл, если обрыв связи)
+            os.replace(temp_file, local_file)
+            
+            self.my_bot.send_message(for_reports, f"✅ admin-data скопирован с {host}")
+            return True
+            
+        except paramiko.AuthenticationException:
+            self.my_bot.send_message(for_reports, f"❌ Ошибка аутентификации. Проверь ключ и пользователя на {host}")
+            return False
+        except paramiko.SSHException as e:
+            self.my_bot.send_message(for_reports, f"❌ SSH ошибка: {e}")
+            return False
         except Exception as e:
-            self.my_bot.send_message(for_reports,f"Ошибка при копировании файла: {e}")
+            self.my_bot.send_message(for_reports, f"❌ Ошибка копирования: {e}\n{traceback.format_exc()}")
             return False
         finally:
             ssh_client.close()
-    
-        return True
-    def au_load_admin(self,message):
+
+
+    def au_load_admin(self, message):
+        """Загружает admin-data с первого бота и показывает список админов"""
         try:
             success = self.copy_admin_data_from_remote(
-        host="148.253.214.215",           # ← заменить на реальный IP
-        username="popugai",
-        # private_key_path="/home/user/.ssh/id_rsa",  # ← раскомментировать, если используешь ключ
-         password=TOP_SECRET_KEY                  # ← или использовать пароль
-    )
-            if success:
-                print("Операция завершена успешно.")
-            else:
-                print("Операция завершилась с ошибкой.")
-        except:
-            bot.my_bot.send_message(for_reports,traceback.format_exc())
-        db=shelve.open(ADMIN_DATA_SHELVE)
-        self.auth=db.get('auth',auth)
-        self.ids=db.get('ids',ids)
-        db.close()
-        txt="Администраторы:\n"
+                host="148.253.214.215",  # ← ЗАМЕНИ НА РЕАЛЬНЫЙ IP
+                username="popugai",          # ← пользователь на первом сервере
+                private_key_path="keys/sync_key"  # ← путь к приватному ключу
+            )
+            
+            if not success:
+                self.my_bot.send_message(message.from_user.id, "⚠️ Не удалось синхронизировать admin-data. Показываю локальную копию.")
+        except Exception as e:
+            self.my_bot.send_message(for_reports, f"au_load_admin error: {traceback.format_exc()}")
+        
+        # Читаем данные (либо свежие с сервера, либо локальные)
+        try:
+            db = shelve.open(ADMIN_DATA_SHELVE)
+            self.auth = db.get('auth', auth)
+            self.ids = db.get('ids', ids)
+            db.close()
+        except Exception as e:
+            self.my_bot.send_message(for_reports, f"Ошибка чтения shelve: {e}")
+            self.auth = auth
+            self.ids = ids
+        
+        # Выводим список
+        txt = "Администраторы:\n"
         for key in self.auth:
-            txt+=self.auth[key]+'\n'
-        self.my_bot.send_message(message.from_user.id,txt)
+            txt += self.auth[key] + '\n'
+        self.my_bot.send_message(message.from_user.id, txt)
+        self.my_bot.send_message(message.from_user.id, f"IDs: {self.ids}")
 
     def is_night_time(self):
         now = datetime.now().time()
