@@ -16,6 +16,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 import requests
 import time
+import paramiko
 for_reports='5266773307'
 
 cool_boys=[
@@ -1559,17 +1560,77 @@ class Bot:
             txt+='\n'
             i+=1
         self.my_bot.send_message(message.from_user.id,txt)
-        
+    
+
+    def copy_admin_data_from_remote(self,host, username='root', private_key_path=None, password=None):
+        remote_file = '/home/popugai/PopugeiBot/data/admin-data'
+        local_file = ADMIN_DATA_SHELVE
+    
+        # Создаём SSH-клиент
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    
+        try:
+            # Подключение
+            if private_key_path:
+                key = paramiko.RSAKey.from_private_key_file(private_key_path)
+                ssh_client.connect(hostname=host, username=username, pkey=key, timeout=30)
+            elif password:
+                ssh_client.connect(hostname=host, username=username, password=password, timeout=30)
+            else:
+                # Попытка подключения с использованием ключа по умолчанию (~/.ssh/id_rsa)
+                ssh_client.connect(hostname=host, username=username, timeout=30)
+    
+            print(f"Успешно подключено к {host}")
+    
+            # Открываем SFTP-сессию
+            sftp = ssh_client.open_sftp()
+    
+            # Проверяем, существует ли файл на удалённой машине
+            try:
+                sftp.stat(remote_file)  # Проверка существования файла
+            except FileNotFoundError:
+                print(f"Ошибка: Файл {remote_file} не найден на удалённом сервере.")
+                sftp.close()
+                ssh_client.close()
+                return False
+    
+            # Копируем файл (перезапишет, если существует)
+            print(f"Копируем файл с {host}:{remote_file} в {local_file}")
+            sftp.get(remote_file, local_file)
+            print(f"Файл успешно скопирован в {local_file}")
+    
+            sftp.close()
+    
+        except Exception as e:
+            print(f"Ошибка при копировании файла: {e}")
+            return False
+        finally:
+            ssh_client.close()
+    
+        return True
     def au_load_admin(self,message):
+        try:
+            success = self.copy_admin_data_from_remote(
+        host="148.253.214.215",           # ← заменить на реальный IP
+        username="popugai",
+        # private_key_path="/home/user/.ssh/id_rsa",  # ← раскомментировать, если используешь ключ
+         password=TOP_SECRET_KEY                  # ← или использовать пароль
+    )
+            if success:
+                print("Операция завершена успешно.")
+            else:
+                print("Операция завершилась с ошибкой.")
+        except:
+            pass
         db=shelve.open(ADMIN_DATA_SHELVE)
-        self.auth=db.get('auth',auth)
+        self.admins=db.get('auth',admins)
         self.ids=db.get('ids',ids)
         db.close()
         txt="Администраторы:\n"
-        for key in self.auth:
-            txt+=self.auth[key]+'\n'
+        for key in self.admins:
+            txt+=self.admins[key]+'\n'
         self.my_bot.send_message(message.from_user.id,txt)
-        self.my_bot.send_message(message.from_user.id,str(self.ids))
 
     def is_night_time(self):
         now = datetime.now().time()
