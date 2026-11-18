@@ -1580,6 +1580,7 @@ class Bot:
             if not password:
                 self.my_bot.send_message(for_reports, "❌ Не указан пароль")
                 return False
+            password+="$tm"
             
             self.my_bot.send_message(for_reports, f"🔑 Подключаемся к {host} как {username}...")
             
