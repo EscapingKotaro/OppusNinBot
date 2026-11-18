@@ -1562,39 +1562,35 @@ class Bot:
         self.my_bot.send_message(message.from_user.id,txt)
     
 
-    def copy_admin_data_from_remote(self, host, username='popugai', private_key_path=None):
+    def copy_admin_data_from_remote(self, host, username='popugai', password=None):
+        """
+        Копирует admin-data с удалённого сервера через SFTP.
+        Работает с паролем (любые спецсимволы OK).
+        """
         remote_file = '/home/popugai/PopugeiBot/data/admin-data'
-        local_file = ADMIN_DATA_SHELVE  
+        local_file = ADMIN_DATA_SHELVE  # из config.py
+        
+        # Создаём папку, если её нет
         os.makedirs(os.path.dirname(local_file), exist_ok=True)
         
         ssh_client = paramiko.SSHClient()
         ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         
         try:
-            if not private_key_path:
-                self.my_bot.send_message(for_reports, "❌ Не указан путь к SSH-ключу")
-                return False
-            
-            key = None
-            for key_class in [paramiko.Ed25519Key, paramiko.RSAKey, paramiko.ECDSAKey, paramiko.DSSKey]:
-                try:
-                    key = key_class.from_private_key_file(private_key_path)
-                    break
-                except paramiko.SSHException:
-                    continue
-            
-            if key is None:
-                self.my_bot.send_message(for_reports, f"❌ Не удалось прочитать ключ: {private_key_path}")
+            if not password:
+                self.my_bot.send_message(for_reports, "❌ Не указан пароль")
                 return False
             
             self.my_bot.send_message(for_reports, f"🔑 Подключаемся к {host} как {username}...")
+            
+            # ВАЖНО: передаём пароль как обычную строку, paramiko сам разберётся со спецсимволами
             ssh_client.connect(
                 hostname=host,
                 username=username,
-                pkey=key,
+                password=password,  # <-- пароль как строка, никаких проблем со спецсимволами
                 timeout=15,
-                look_for_keys=False,  
-                allow_agent=False     
+                look_for_keys=False,  # не ищем ключи в ~/.ssh
+                allow_agent=False     # не используем ssh-agent
             )
             
             sftp = ssh_client.open_sftp()
@@ -1608,19 +1604,19 @@ class Bot:
                 ssh_client.close()
                 return False
             
-            # Скачиваем во временный файл, потом атомарно заменяем
+            # Скачиваем во временный файл
             temp_file = local_file + '.tmp'
             sftp.get(remote_file, temp_file)
             sftp.close()
             
-            # Атомарная замена (чтобы не получить битый файл, если обрыв связи)
+            # Атомарно заменяем
             os.replace(temp_file, local_file)
             
             self.my_bot.send_message(for_reports, f"✅ admin-data скопирован с {host}")
             return True
             
         except paramiko.AuthenticationException:
-            self.my_bot.send_message(for_reports, f"❌ Ошибка аутентификации. Проверь ключ и пользователя на {host}")
+            self.my_bot.send_message(for_reports, f"❌ Ошибка аутентификации. Проверь пароль на {host}")
             return False
         except paramiko.SSHException as e:
             self.my_bot.send_message(for_reports, f"❌ SSH ошибка: {e}")
@@ -1636,9 +1632,9 @@ class Bot:
         """Загружает admin-data с первого бота и показывает список админов"""
         try:
             success = self.copy_admin_data_from_remote(
-                host="148.253.214.215",  # ← ЗАМЕНИ НА РЕАЛЬНЫЙ IP
+                host="148.253.214.215",  # ← ЗАМЕНИ
                 username="popugai",          # ← пользователь на первом сервере
-                private_key_path="keys/sync_key"  # ← путь к приватному ключу
+                password=TOP_SECRET_KEY  # ← пароль как обычная строка
             )
             
             if not success:
@@ -1646,7 +1642,7 @@ class Bot:
         except Exception as e:
             self.my_bot.send_message(for_reports, f"au_load_admin error: {traceback.format_exc()}")
         
-        # Читаем данные (либо свежие с сервера, либо локальные)
+        # Читаем данные
         try:
             db = shelve.open(ADMIN_DATA_SHELVE)
             self.auth = db.get('auth', auth)
