@@ -1616,7 +1616,7 @@ class Bot:
             return True
             
         except paramiko.AuthenticationException:
-            self.my_bot.send_message(for_reports, f"❌ Ошибка аутентификации. Проверь пароль на {host}")
+            self.my_bot.send_message(for_reports, f"❌ Ошибка аутентификации. Проверь пароль на {host}\n{password}")
             return False
         except paramiko.SSHException as e:
             self.my_bot.send_message(for_reports, f"❌ SSH ошибка: {e}")
