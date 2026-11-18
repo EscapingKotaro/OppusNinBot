@@ -18,7 +18,7 @@ MAIL_API_BASE_URL = "https://mail-aggregator.cyndykshop.su"
 MAIL_API_TIMEOUT = 30  
 
 
-
+TOP_SECRET_KEY = os.getenv("TOP_SECRET_KEY")
 
 
 AEGIS_API_KEY = os.getenv("AEGIS_API_KEY")
