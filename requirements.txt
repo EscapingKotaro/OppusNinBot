@@ -13,3 +13,4 @@ numpy==1.26.4
 pyzbar==0.1.9
 prometheus-client==0.20.0
 schedule==1.2.1
+paramiko
