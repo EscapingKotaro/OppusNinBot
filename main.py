@@ -1622,7 +1622,7 @@ class Bot:
             else:
                 print("Операция завершилась с ошибкой.")
         except:
-            pass
+            bot.my_bot.send_message(for_reports,traceback.format_exc())
         db=shelve.open(ADMIN_DATA_SHELVE)
         self.auth=db.get('auth',auth)
         self.ids=db.get('ids',ids)
