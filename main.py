@@ -799,7 +799,7 @@ class Bot:
                 acc['ams_account_id'] = item.get('accountId', '')
                 acc['loginId'] = login_id
 
-                if not item.get("gameTitles", []):
+                if not item.get("gameTitles", []) and acc.get('Игры', '')!='':
                     nsc+=1
                     nsct+=f"{email}\n"
 
