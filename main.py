@@ -760,16 +760,17 @@ class Bot:
                 email_index.setdefault(mail, key)
 
         synced_count = 0
-        nsc=0
-        nsct=""
+        nsc = 0
+        nsct = ""
+        patched_count = 0
+        patch_errors = []
 
         for item in items:
             try:
-
-
                 email = (item.get("email") or "").strip()
                 account_code = (item.get("accountCode") or "").strip()
                 login_id = (item.get("loginId") or "").strip()
+                account_id = item.get("accountId", "")
 
                 old_by_email = email_index.get(email.lower()) if email else None
 
@@ -788,7 +789,7 @@ class Bot:
                 acc['Почта'] = email or acc.get('Почта', '')
                 acc['Пароль'] = item.get("password") or acc.get('Пароль', '***')
                 acc['Игры'] = '\n'.join(item.get("gameTitles", [])) or acc.get('Игры', '')
-                acc['Резервные коды']=""
+                acc['Резервные коды'] = ""
                 if item.get("reserveCodesCount", 0) > 0:
                     acc['Резервные коды'] = '\n'.join(item.get("reserveCodes", []))
                 acc['Дополнительно'] = item.get("additionalInfo") or acc.get('Дополнительно', '')
@@ -796,12 +797,46 @@ class Bot:
                 acc['logins30d'] = item.get('logins30d', 0)
                 acc['loginsTotal'] = item.get('loginsTotal', 0)
                 acc['lastLogins'] = item.get('lastLogins', '')
-                acc['ams_account_id'] = item.get('accountId', '')
+                acc['ams_account_id'] = account_id
                 acc['loginId'] = login_id
 
-                if not item.get("gameTitles", []) and acc.get('Игры', '')!='':
-                    nsc+=1
-                    nsct+=f"{email}\n"
+                # 🔥 НОВОЕ: Если в AMS нет игр, но в локальной базе есть - отправляем PATCH
+                if not item.get("gameTitles", []) and acc.get('Игры', '') != '':
+                    nsc += 1
+                    nsct += f"{email}\n"
+
+                    # Собираем данные для PATCH
+                    local_games = acc.get('Игры', '').strip().split('\n')
+                    local_reserve_codes = acc.get('Резервные коды', '').strip().split('\n') if acc.get('Резервные коды', '') else []
+
+                    update_data = {
+                        "gameTitles": [g.strip() for g in local_games if g.strip()],
+                        "reserveCodes": [c.strip() for c in local_reserve_codes if c.strip()],
+                        "reserveCodesCount": len(local_reserve_codes),
+                        "additionalInfo": acc.get('Дополнительно', ''),
+                    }
+
+                    # Добавляем пароль только если он не дефолтный
+                    password = acc.get('Пароль', '')
+                    if password and password != '***':
+                        update_data["password"] = password
+
+                    # Отправляем PATCH
+                    if account_id:
+                        try:
+                            upd_res = self.ams.update_account(account_id, update_data)
+                            if upd_res.get("ok"):
+                                patched_count += 1
+                                self.my_bot.send_message(for_reports, f"✅ PATCH успешен для {email}: {upd_res.get('changed', False)}\n{upd_res}"[:3000])
+                            else:
+                                patch_errors.append(f"{email}: {upd_res}")
+                                self.my_bot.send_message(for_reports, f"⚠️ PATCH ошибка для {email}: {upd_res}")
+                        except Exception as e:
+                            import traceback
+                            patch_errors.append(f"{email}: {str(e)}")
+                            self.my_bot.send_message(for_reports, f"❌ PATCH exception для {email}: {traceback.format_exc()}")
+                    else:
+                        patch_errors.append(f"{email}: нет accountId")
 
                 synced_count += 1
             except Exception:
@@ -809,8 +844,23 @@ class Bot:
                 error_msg = f"ams_sync item crash: {item.get('email')}\n{traceback.format_exc()}"
                 self.my_bot.send_message(for_reports, error_msg)
 
+        self.little_save_data()
 
-        self.my_bot.send_message(for_reports, f"✅ AMS Sync finished. nsc {nsc}\n{nsct}"[:3000])
+        # Формируем итоговый отчет
+        report = f"✅ AMS Sync finished.\n"
+        report += f"📊 Synced: {synced_count}\n"
+        report += f"🔧 Patched (добавлены игры): {patched_count}\n"
+        report += f"⚠️ Найдено без игр в AMS: {nsc}\n"
+
+        if patch_errors:
+            report += f"\n❌ Ошибки PATCH ({len(patch_errors)}):\n" + "\n".join(patch_errors[:10])
+            if len(patch_errors) > 10:
+                report += f"\n... и еще {len(patch_errors) - 10}"
+
+        self.my_bot.send_message(for_reports, report[:4000])
+
+        if message:
+            self.my_bot.send_message(message.from_user.id, f"✅ Синхронизировано: {synced_count}\n🔧 Обновлено через PATCH: {patched_count}")
 
     def ams_sync(self, message=None):
         if message:
