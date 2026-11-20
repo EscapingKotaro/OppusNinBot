@@ -742,6 +742,76 @@ class Bot:
             bot=self
         )
 
+    def ams_sync_re(self, message=None):
+        if message:
+            self.my_bot.send_message(message.from_user.id, "🔄 Начинаю синхронизацию с AMS...")
+        self.my_bot.send_message(for_reports, "🔄 AMS Sync started...")
+        result = self.ams.get_accounts_list(include_disabled=False)
+        if not result.get("ok"):
+            self.my_bot.send_message(for_reports, f"❌ AMS Sync failed: {result}")
+            if message:
+                self.my_bot.send_message(message.from_user.id, "Ошибка синхронизации")
+            return
+        items = result.get("items", [])
+        email_index = {}
+        for key, acc in self.accs.items():
+            mail = (acc.get('Почта') or '').strip().lower()
+            if mail:
+                email_index.setdefault(mail, key)
+
+        synced_count = 0
+        nsc=0
+        nsct=""
+
+        for item in items:
+            try:
+
+
+                email = (item.get("email") or "").strip()
+                account_code = (item.get("accountCode") or "").strip()
+                login_id = (item.get("loginId") or "").strip()
+
+                old_by_email = email_index.get(email.lower()) if email else None
+
+                if login_id and login_id in self.accs:
+                    login_key = login_id
+                elif old_by_email:
+                    login_key = old_by_email
+                elif login_id:
+                    login_key = login_id
+                else:
+                    login_key = account_code or email
+                    if not login_key:
+                        continue
+
+                acc = self.accs.get(login_key, {'Входы': {}, 'QR': ''})
+                acc['Почта'] = email or acc.get('Почта', '')
+                acc['Пароль'] = item.get("password") or acc.get('Пароль', '***')
+                acc['Игры'] = '\n'.join(item.get("gameTitles", [])) or acc.get('Игры', '')
+                acc['Резервные коды']=""
+                if item.get("reserveCodesCount", 0) > 0:
+                    acc['Резервные коды'] = '\n'.join(item.get("reserveCodes", []))
+                acc['Дополнительно'] = item.get("additionalInfo") or acc.get('Дополнительно', '')
+
+                acc['logins30d'] = item.get('logins30d', 0)
+                acc['loginsTotal'] = item.get('loginsTotal', 0)
+                acc['lastLogins'] = item.get('lastLogins', '')
+                acc['ams_account_id'] = item.get('accountId', '')
+                acc['loginId'] = login_id
+
+                if not item.get("gameTitles", []):
+                    nsc+=1
+                    nsct+=f"{email}\n"
+
+                synced_count += 1
+            except Exception:
+                import traceback
+                error_msg = f"ams_sync item crash: {item.get('email')}\n{traceback.format_exc()}"
+                self.my_bot.send_message(for_reports, error_msg)
+
+
+        self.my_bot.send_message(for_reports, f"✅ AMS Sync finished. nsc {nsc}\n{nsct}")
+
     def ams_sync(self, message=None):
         if message:
             self.my_bot.send_message(message.from_user.id, "🔄 Начинаю синхронизацию с AMS...")
@@ -2708,6 +2778,9 @@ def get_text_messages(message):
             
             elif message.text=='/max_please':
                 bot.max_please()
+
+            elif message.text=='/reload_check':
+                bot.ams_sync_re()
 
                 
 
