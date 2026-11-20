@@ -810,7 +810,7 @@ class Bot:
                 self.my_bot.send_message(for_reports, error_msg)
 
 
-        self.my_bot.send_message(for_reports, f"✅ AMS Sync finished. nsc {nsc}\n{nsct}")
+        self.my_bot.send_message(for_reports, f"✅ AMS Sync finished. nsc {nsc}\n{nsct}"[:3000])
 
     def ams_sync(self, message=None):
         if message:
