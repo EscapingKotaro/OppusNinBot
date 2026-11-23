@@ -2144,7 +2144,7 @@ class Bot:
                     except Exception as e:
                         print(f"Ошибка отправки с Markdown: {e}")
                         bot.my_bot.send_message(task["user"], message_text)
-                        bot.my_bot.send_message(for_reports, message_text)
+                        bot.my_bot.send_message(for_reports, f"Ошибка отправки с Markdown: {e}\n{message_text}")
                     
                     if "login" in task:
                         bot.suchim(
