@@ -3886,11 +3886,11 @@ def get_text_messages(message):
                 # ==========================================
                 # 1. ПРИОРИТЕТНЫЙ ПОИСК ЧЕРЕЗ AMS API
                 # ==========================================
-                ams_result = bot.ams.search_nin_account_smart(message.text)
+                ams_result = bot.search_nin_account_smart(message.text)
 
                 if ams_result and ams_result.get("ok"):
                     # Аккаунт найден! Сохраняем его в локальный кеш в правильном формате
-                    acc_key = bot.ams._process_nin_ams_account(ams_result)
+                    acc_key = bot._process_nin_ams_account(ams_result)
 
                     if acc_key:
                         # Показываем инфо и ПРЕКРАЩАЕМ дальнейший поиск
