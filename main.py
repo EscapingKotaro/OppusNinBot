@@ -742,6 +742,69 @@ class Bot:
             bot=self
         )
 
+
+    def search_nin_account_smart(self, query: str) -> dict:
+        """
+        Умный поиск Nintendo аккаунта. Сам определяет, что передавать: email, identifier или login.
+        """
+        query = str(query).strip()
+        if not query:
+            return None
+
+        params = {
+            "includeDisabled": "false",
+            "includeDeleted": "false"
+        }
+
+        # Эвристика: определяем тип параметра
+        if '@' in query:
+            params["email"] = query.lower()
+        # Идентификатор: либо просто цифры (2412), либо 's' + цифры (s0033)
+        elif re.match(r'^(s\d+|\d+)$', query, re.IGNORECASE):
+            params["identifier"] = query.lower()
+        # Всё остальное считаем Nintendo Login ID
+        else:
+            params["login"] = query.lower()
+
+        return self.ams._request("GET", "/api/ams/ninaccounts/getId", params=params)
+
+    def _process_nin_ams_account(self, item: dict) -> str:
+        """
+        Преобразует данные из AMS в формат self.accs и сохраняет.
+        Возвращает ключ аккаунта.
+        """
+        # Ключом делаем loginId, или accountCode, или email (по приоритету)
+        login_key = item.get("loginId") or item.get("accountCode") or item.get("email")
+        if not login_key:
+            return ""
+
+        # Берем существующий или создаем новый, чтобы не потерять локальные правки
+        acc = self.accs.get(login_key, {'Входы': {}, 'QR': ''})
+
+        # Обновляем поля по аналогии с твоим ams_sync
+        acc['Почта'] = item.get("email") or acc.get('Почта', '')
+        # Пароль AMS обычно не отдает в целях безопасности, оставляем старый или заглушку
+        acc['Пароль'] = acc.get('Пароль', '***')
+        acc['Игры'] = '\n'.join(item.get("gameTitles", [])) or acc.get('Игры', '')
+
+        if item.get("reserveCodesCount", 0) > 0 and item.get("reserveCodes"):
+            acc['Резервные коды'] = '\n'.join(item.get("reserveCodes"))
+        else:
+            acc['Резервные коды'] = ""
+
+        acc['Дополнительно'] = item.get("additionalInfo") or acc.get('Дополнительно', '')
+        acc['logins30d'] = item.get('logins30d', 0)
+        acc['loginsTotal'] = item.get('loginsTotal', 0)
+        acc['lastLogins'] = item.get('lastLogins', '')
+        acc['ams_account_id'] = item.get('accountId', '')
+        acc['loginId'] = login_key
+
+        # Сохраняем и обновляем файл
+        self.accs[login_key] = acc
+        self.little_save_data()
+
+        return login_key
+
     def ams_sync_re(self, message=None):
         if message:
             self.my_bot.send_message(message.from_user.id, "🔄 Начинаю синхронизацию с AMS...")
@@ -3819,12 +3882,38 @@ def get_text_messages(message):
                 
                 
             else:
+                # ==========================================
+                # 1. ПРИОРИТЕТНЫЙ ПОИСК ЧЕРЕЗ AMS API
+                # ==========================================
+                ams_result = bot.ams.search_nin_account_smart(message.text)
 
+                if ams_result and ams_result.get("ok"):
+                    # Аккаунт найден! Сохраняем его в локальный кеш в правильном формате
+                    acc_key = bot.ams._process_nin_ams_account(ams_result)
+
+                    if acc_key:
+                        # Показываем инфо и ПРЕКРАЩАЕМ дальнейший поиск
+                        bot.get_info(message, acc_key, False)
+                        return  # <--- ВАЖНО: выходим из функции
+
+                elif ams_result and ams_result.get("detail") and "несколько" in ams_result.get("detail", "").lower():
+                    # Сработал HTTP 409 (Conflict)
+                    bot.my_bot.send_message(
+                        message.from_user.id,
+                        "⚠️ Найдено несколько аккаунтов с таким значением.\n"
+                        "Пожалуйста, уточните поиск, указав точный <b>email</b>.",
+                        parse_mode="HTML"
+                    )
+                    return  # <--- Тоже прерываем, ждем уточнения
+
+                # ==========================================
+                # 2. СТАНДАРТНЫЙ ЛОКАЛЬНЫЙ ПОИСК (Фоллбэк)
+                # ==========================================
                 found_accs = []
 
                 for acc in bot.accs:
                     if str(message.text).strip() == str(bot.get_mname(acc)).strip() or message.text == f" {bot.get_mname(acc)}" or message.text == f"{bot.get_mname(acc)} ":
-                        found_accs.append((1, acc))  
+                        found_accs.append((1, acc))
 
                 for acc in bot.accs:
                     if re.fullmatch(r'\(' + re.escape(message.text) + r'\).*', acc):
@@ -3857,7 +3946,6 @@ def get_text_messages(message):
                         if message.text in acc:
                             found_accs.append((5, acc))
 
-
                 if bot.accs.get(message.text.lower(), {}):
                     found_accs.append((1, message.text.lower()))
 
@@ -3867,39 +3955,34 @@ def get_text_messages(message):
                         unique_accs[acc_key] = priority
 
                 sorted_accs = sorted(unique_accs.items(), key=lambda x: x[1])
-
-
                 top_accs = sorted_accs[:3]
 
-
                 if top_accs:
-                    for fnm, priority  in top_accs:
-
+                    for fnm, priority in top_accs:
                         acc = bot.accs[fnm]
                         bot.get_info(message, fnm, False)
                 else:
-
                     try:
                         db = shelve.open(DEL_ACCS_DATA_SHELVE)
                         del_accs = db.get("del_accs", {})
                         db.close()
-                        
-                        if os.path.exists(DEL_ACCS_DATA_SHELVE): 
+
+                        if os.path.exists(DEL_ACCS_DATA_SHELVE):
                             os.remove(DEL_ACCS_DATA_SHELVE)
-                        
+
                         db = shelve.open(DEL_ACCS_DATA_SHELVE)
-                        db["del_accs"]=del_accs 
+                        db["del_accs"] = del_accs
                         db.close()
                     except Exception:
                         del_accs = {}
-                    
+
                     chj = True
                     for acci in del_accs:
                         if message.text.lower() in acci.lower():
                             chj = False
                             bot.my_bot.send_message(message.from_user.id, del_accs[acci]["Удален"])
                             break
-                    
+
                     if chj:
                         bot.my_bot.send_message(message.from_user.id, 'Аккаунт не найден', reply_markup=markup)
         
